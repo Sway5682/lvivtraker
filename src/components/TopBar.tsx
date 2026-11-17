@@ -1,6 +1,7 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 import { Search, X, TramFront, Bus, Zap, Star, Locate } from "lucide-react";
 import type { FilterType, VehicleType } from "../types";
+import type { FeedStatus } from "../data/live";
 import { ROUTES, STOPS, TYPE_LABELS_UK } from "../data/lviv";
 
 interface Props {
@@ -9,7 +10,7 @@ interface Props {
   search: string;
   onSearchChange: (s: string) => void;
   onLocate: () => void;
-  liveMode: boolean;
+  feedStatus: FeedStatus;
   favoriteCount: number;
 }
 
@@ -34,7 +35,7 @@ export default function TopBar({
   search,
   onSearchChange,
   onLocate,
-  liveMode,
+  feedStatus,
   favoriteCount,
 }: Props) {
   const [focused, setFocused] = useState(false);
@@ -173,10 +174,34 @@ export default function TopBar({
             );
           })}
 
-          <div className="shrink-0 flex items-center gap-1.5 px-3 h-9 rounded-full text-xs font-medium border backdrop-blur-xl ml-auto">
-            <span className={`w-2 h-2 rounded-full ${liveMode ? "bg-emerald-400 animate-pulse" : "bg-amber-400"}`} />
-            <span className={liveMode ? "text-emerald-300" : "text-amber-300"}>
-              {liveMode ? "Live" : "Демо"}
+          <div
+            className={`shrink-0 flex items-center gap-1.5 px-3 h-9 rounded-full text-xs font-medium border backdrop-blur-xl ml-auto ${
+              feedStatus === "live"
+                ? "border-emerald-400/30"
+                : feedStatus === "offline"
+                  ? "border-red-400/30"
+                  : "border-white/10"
+            }`}
+          >
+            <span
+              className={`w-2 h-2 rounded-full ${
+                feedStatus === "live"
+                  ? "bg-emerald-400 animate-pulse"
+                  : feedStatus === "offline"
+                    ? "bg-red-400"
+                    : "bg-amber-400 animate-pulse"
+              }`}
+            />
+            <span
+              className={
+                feedStatus === "live"
+                  ? "text-emerald-300"
+                  : feedStatus === "offline"
+                    ? "text-red-300"
+                    : "text-amber-300"
+              }
+            >
+              {feedStatus === "live" ? "Live GPS" : feedStatus === "offline" ? "Офлайн · помилка API" : "З'єднання…"}
             </span>
           </div>
         </div>

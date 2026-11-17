@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import type { Vehicle, FilterType, Selection, StopArrival } from "./types";
-import { fetchVehicles, fetchStopArrivals, isLiveMode } from "./data/api";
+import { fetchVehicles, fetchStopArrivals } from "./data/api";
+import { useEdgeFunction, type FeedStatus } from "./data/live";
 import { getRoute, getStop } from "./data/lviv";
 import { X } from "lucide-react";
 import MapView from "./components/MapView";
@@ -18,17 +19,19 @@ export default function App() {
   const [followUser, setFollowUser] = useState(false);
   const [arrivals, setArrivals] = useState<StopArrival[]>([]);
   const [arrivalsLoading, setArrivalsLoading] = useState(false);
-  const [live, setLive] = useState(false);
+  const [lastFetchAt, setLastFetchAt] = useState<number | null>(null);
+  const [now, setNow] = useState(Date.now());
   const watchIdRef = useRef<number | null>(null);
   const { favorites, toggle, isFavorite } = useFavorites();
+  const edgeStatus = useEdgeFunction();
 
   useEffect(() => {
     let cancelled = false;
     async function load() {
-      const v = await fetchVehicles();
+      const { vehicles: v, fetchedAt } = await fetchVehicles();
       if (!cancelled) {
         setVehicles(v);
-        setLive(isLiveMode());
+        setLastFetchAt(fetchedAt);
       }
     }
     load();
@@ -37,6 +40,11 @@ export default function App() {
       cancelled = true;
       clearInterval(interval);
     };
+  }, []);
+
+  useEffect(() => {
+    const tick = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(tick);
   }, []);
 
   const selectedVehicle = selected?.kind === "vehicle"
@@ -67,6 +75,14 @@ export default function App() {
       clearInterval(interval);
     };
   }, [selected, selectedStop]);
+
+  const freshData = lastFetchAt !== null && now - lastFetchAt < 15000;
+  const status: FeedStatus =
+    edgeStatus === "offline" || (!freshData && lastFetchAt === null)
+      ? "offline"
+      : freshData
+        ? "live"
+        : "connecting";
 
   const filteredVehicles = vehicles.filter((v) => {
     if (selectedRouteIds.size > 0 && !selectedRouteIds.has(v.routeId)) return false;
@@ -159,7 +175,7 @@ export default function App() {
         search={search}
         onSearchChange={setSearch}
         onLocate={handleLocate}
-        liveMode={live}
+        feedStatus={status}
         favoriteCount={favoriteCount}
       />
 
@@ -173,7 +189,11 @@ export default function App() {
                 <span key={id} className="font-bold" style={{ color: r.color }}>
                   {r.shortName}
                 </span>
-              ) : null;
+              ) : (
+                <span key={id} className="font-bold text-blue-300">
+                  {vehicles.find((v) => v.routeId === id)?.routeShortName ?? "—"}
+                </span>
+              );
             })}
           </span>
           <button

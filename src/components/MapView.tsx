@@ -2,7 +2,6 @@ import { useEffect, useRef, useMemo } from "react";
 import L from "leaflet";
 import type { Vehicle, StopInfo, Selection } from "../types";
 import { LVIV_CENTER, STOPS, getRoute, ROUTES } from "../data/lviv";
-import { getRouteShape } from "../data/api";
 
 interface Props {
   vehicles: Vehicle[];
@@ -212,7 +211,7 @@ export default function MapView({
       const firstId = selectedRouteIds.values().next().value;
       if (!firstId) return;
       const route = getRoute(firstId);
-      const shape = getRouteShape(firstId);
+      const shape = route?.shape;
       if (route && shape && shape.length > 1) {
         routeLayerRef.current = L.polyline(shape, {
           color: route.color,
